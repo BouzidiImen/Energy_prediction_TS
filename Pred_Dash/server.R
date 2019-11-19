@@ -11,7 +11,7 @@ library(lubridate)
 library(forecast)
 library(ggplot2)
 library(plotly)
-library(corrplot)
+library(ggcorrplot)
 library(RColorBrewer)
 d=read_excel('donnees_Electricite.xlsx',sheet = 2)
 Date=paste(d$annee,d$mois,d$jour,sep = '-')
@@ -61,6 +61,40 @@ output$plot2=renderPlot({
   
 })
 
+output$down2<- downloadHandler(
+  filename =  function() {
+    paste("SeriesDec.pdf")
+  },
+  # content is a function with argument file. content writes the plot to the device
+  content = function(file) {
+    pdf(file) # open the pdf device
+    
+    Variab<- ts(d[[input$Var]],start = c(2010, as.numeric(format(d$Date[1], "%j"))),
+                frequency = 365)
+    dec=decompose(Variab) %>% autoplot+theme_bw()
+    print(dec)
+    dev.off()  # turn the device off
+  }
+)
+
+output$sum6 <-renderPrint({
+  tmin=d[[5]]
+  Tmax=d[[6]]
+  t.test(tmin,Tmax)
+
+})
+output$sum7 <-renderPrint({
+  tmin=d[[5]]
+  Tmoy=d[[7]]
+  t.test(tmin,Tmoy)
+})
+output$sum8 <-renderPrint({
+  Tmax=d[[6]]
+  Tmoy=d[[7]]
+  t.test(Tmax,Tmoy)
+})
+
+
 output$plot3=renderPlotly({
   
  p= plot_ly(x = d[[input$Var3]], y = d[[8]],type = 'scatter', 
@@ -69,45 +103,31 @@ output$plot3=renderPlotly({
                              color = '#80bfff',#ccccff
                              line = list(color = '#3399ff',
                                          width = 2))) %>%
-    layout(title = 'Styled Scatter',
-           yaxis = list(zeroline = FALSE),
-           xaxis = list(zeroline = FALSE))
+    layout(title = 'Correlation between consumed energy and temperature',
+           yaxis = list(title='Energy',zeroline = FALSE),
+           xaxis = list(zeroline = FALSE,title='Temperature'))
   
   p
   
   
 })
 
-output$down<- downloadHandler(
-  filename =  function() {
-    paste("Indkmeans.pdf")
-  },
-  # content is a function with argument file. content writes the plot to the device
-  content = function(file) {
-    pdf(file) # open the pdf device
-    print(
-      plot_ly(x = d[[input$Var3]], y = d[[8]],type = 'scatter', 
-              mode   = 'markers',
-              marker = list(size = 10,
-                            color = '#80bfff',#ccccff
-                            line = list(color = '#3399ff',
-                                        width = 2))) %>%
-        layout(title = 'Styled Scatter',
-               yaxis = list(zeroline = FALSE),
-               xaxis = list(zeroline = FALSE))
-    )
-    dev.off()  # turn the device off
-  }
-)
+
 
 
 
 output$ttt= renderPlot({
   
   M=cor(d[,5:8])
-  corrplot(M, type="upper", method='pie')
-  
+  ggcorrplot(M,
+             outline.col = "white",
+             lab = TRUE,
+             lab_size = 5,
+             lab_col = '#736F6E',
+             ggtheme = ggplot2::theme_gray,
+             colors = c('#595959', "white", "#6D9EC1"))
 }) 
+
 
 
 
@@ -115,7 +135,6 @@ output$text=renderPrint({
   
   
   formule = paste("Energie_trans",'~',paste(c(input$Var4,input$Var5), collapse= "+"))
-  a = unlist(input$nb)
   a = unlist(input$nb)
   b=2922-a
   train <- d[1:b, ] 

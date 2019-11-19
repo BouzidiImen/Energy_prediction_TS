@@ -22,7 +22,7 @@ shinyUI(dashboardPage(
     ########## sider panel ####
     dashboardSidebar( width = 250,
                       sidebarMenu(
-                          menuItem("Visualize Data", tabName = "VD", icon = icon("boxes")),
+                          menuItem("Visualize Data", tabName = "VD", icon = icon("table")),
                           
                           menuItem("Exploratory Analysis", tabName = "DA", icon = icon("connectdevelop"),
                                    startExpanded = T,
@@ -56,16 +56,17 @@ shinyUI(dashboardPage(
                       
                       box( status = "primary",  width = 12,
                                       tabsetPanel(
-                                          selected = "Plot",
-                                          br(),
+                                          selected = "Temporal Series Plot",
+            
                                          
                                               selectInput("Var", "Choose a variable :",width = '200px',
                                                           colnames(d[,5:8]),selected = "Energie_trans"),
                                           
                                         
                             
-                                          tabPanel("Plot",br(),dygraphOutput("plot"),downloadButton(outputId = "down", label = "Download the plot")),
-                                          tabPanel("Decomposition",br(),plotOutput('plot2'))
+                                          tabPanel("Temporal Series Plot",br(),dygraphOutput("plot")),
+                                          tabPanel("Decomposition",plotOutput('plot2'),br(),
+                                                   downloadButton(outputId = "down2", label = "Download the plot"))
                                       )),
                                  tags$head(tags$style(" #cite {
                                       color: #949793;
@@ -87,22 +88,29 @@ shinyUI(dashboardPage(
                 box( status = "primary",  width = 8 ,
                      tabsetPanel(
                          
-                         selected = "Plot",
+                         selected = "Correlation Scatterplot",
                          
                          
-                         tabPanel("Plot",
+                         tabPanel("Correlation Scatterplot",
                                   br(),
                                   
                                   selectInput("Var3", "Choose a variable :",width = '200px',
                                               colnames(d[,5:7]),selected = "tmin"),
                                   
                                   
-                                  br(),plotlyOutput('plot3'),br(),
-                                  downloadButton(outputId = "down", label = "Download the plot")),
-                         tabPanel("Correlation",br(),
+                                  br(),plotlyOutput('plot3')),
+                         tabPanel("Correlogram",br(),
                                   br(),
                                   
-                                  plotOutput('ttt'))
+                                  plotOutput('ttt')),
+                         tabPanel("t-test for temperatures",br(),
+                                  br(),verbatimTextOutput("sum6"),verbatimTextOutput("sum7")
+                                  ,verbatimTextOutput("sum8"),
+                                  
+                                  "We have to include one of the temperature in the model because of the 
+                                  correlation that is clear from the correlogram and t-tests.
+                                  It's the temperature which is more correlated to Energy consumption: tmin.
+                                  ")
                 )
                 
                 
@@ -115,22 +123,23 @@ shinyUI(dashboardPage(
             )),
             ########## Machine learning#####################
             tabItem(tabName = "ML",
-                    fluidRow(  box( title = "Choose the variables and the method: ", solidHeader = T,status = "primary",  width = 4 , 
+                    fluidRow(  box( title = "Choose the parameters of the model: ", solidHeader = T,status = "primary",  width = 4 , 
                                     selectInput("Var4", "Choose model's features:",multiple = T
                                                 ,choices =names(d[,c(1,9:29)]),selected =names(d[,c(1,9:29)]) ),
                                     
                                     selectInput("Var5", "Choose which temperature to iclude:",multiple = F
-                                                ,choices =names(d[,5:7]),selected ='Tmoy'),
+                                                ,choices =names(d[,5:7]),selected ='tmin'),
                                     
                                     
                                     sliderInput("nb", "Number of days of prediction:",
-                                                 min = 1, max =365 , value = 365)
+                                                 min = 1, max =365 , value = 365),
+                                    'The model used is tslm.'
                                     
                     ),
                     box(status = "primary",  width = 8,
                         tabsetPanel(
                             
-                            selected = "Plot",
+                            selected = "Prediction Plot",
                             
                             
                             tabPanel("Prediction Plot",plotlyOutput('plot4')),
