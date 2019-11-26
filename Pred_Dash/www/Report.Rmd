@@ -1,0 +1,229 @@
+---
+title: "Electrical Energy Consumption in Tunisia"
+author: "Imen Bouzidi"
+date: "11/16/2019"
+output:
+ html_document:
+    theme: united
+    highlight: tango
+---
+
+
+## Data Set of electrical energy consumption in Tunisia:
+
+The data set includes observations of electrical energy consumption registred for every day of the month during 7 years (2010-2017).
+
+it includes:
+
+* annee (Year)
+* mois (Month)
+* jour (Day)
+* type (Mixed variable resuming year-month-day)
+* tmin (Minimum temperature)
+* Tmax (Maximum temperature)
+* Tmoy (The average temperature)
+* Energie_trans (Consumed electrical energy)
+* JF (Holiday)
+* Ramadhan
+* Janvier-December (From January to December)
+* Lundi-Dimanche (From monday to sunday)
+* Date
+
+## Packages needed:
+
+```{r loadlib, echo=T, results='hide', message=F, warning=F}
+library(shiny)
+library(plotly)
+library(shinydashboard)
+library(DT)
+library(plotly)
+library(caret)
+library(dygraphs)
+library(xts)         
+library(tidyverse)
+library(lubridate)
+library(forecast)
+library(ggplot2)
+library(plotly)
+library(ggcorrplot)
+library(RColorBrewer)
+library(readxl)
+
+```
+
+
+
+
+```{r data}
+
+D=read_excel('donnees_Electricite.xlsx',sheet = 2)
+datatable(D, rownames = 1, filter="top", options = list(pageLength = 5, scrollX=T) )
+
+```
+
+## The time series component:
+
+```{r pca }
+Date=paste(D$annee,D$mois,D$jour,sep = '-')
+D$Date=as.Date(Date)
+Variab<- ts(D$Energie_trans,start = c(2010, as.numeric(format(D$Date[1], "%j"))),
+              frequency = 365)
+  
+  don <- xts(x =Variab, order.by = D$Date)
+  
+  dygraph(don) %>%
+    dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.1, drawGrid = FALSE, colors="#D8AE5A") %>%
+    dyRangeSelector() %>%
+    dyCrosshair(direction = "vertical") %>%
+    dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+    dyRoller(rollPeriod = 1)
+
+```
+
+It can be seen that the consumption of electrical energy has an ascending trend.
+
+```{r carte}
+  decompose(Variab,type="multiplicative") %>% autoplot+theme_bw()+ggtitle("Seasonal Decomposition of Electrical Energy Consumption")
+```
+
+From the plots above we can recongnize an ascending trend and a stationary remainder (noise).
+
+As the time series increases in magnitude, the seasonal variation increases as well. It's
+why we should use a multiplicative model.
+
+
+## Correlation between Variables:
+
+Tmoy, tmin and Tmax are considered explicative variables, the choice of which one to include in the model is based on its correlation with the energy consumption. Statistically, we can't include two correlated explicative variables in the same model. 
+
+```{r Validation }
+  ggcorrplot(cor(D[,c(8,5:7)]),
+             outline.col = "white",
+             lab = TRUE,
+             lab_size = 5,
+             lab_col = '#736F6E',
+             ggtheme = ggplot2::theme_gray,
+             colors = c('#595959', "white", "#6D9EC1"))
+
+  
+
+```
+ 
+ 
+ In the following, tmin is considered the optimal variable to use among tmin, Tmax and Tmoy with a correlation with Energy equal to 0.65.
+
+For the remaining variables (time related: year, JF, Ramadhan), this correlogram indicates which variables can be most related to the increase in Electrical energy consumption based on the correlation value.
+
+```{r kmeans}
+ggcorrplot(cor(D[,c(8,1,9:10)]),
+             outline.col = "white",
+             lab = TRUE,
+             lab_size = 5,
+             lab_col = '#736F6E',
+             ggtheme = ggplot2::theme_gray,
+             colors = c('#595959', "white", "#6D9EC1"))
+
+```
+
+We can see that the consumption of Energy is correlated with both the year and whether or not it's a ramdhan day.
+
+
+
+```{r plot}
+ggcorrplot(cor(D[,c(8,11:16)]),
+             outline.col = "white",
+             lab = TRUE,
+             lab_size = 5,
+             lab_col = '#736F6E',
+             ggtheme = ggplot2::theme_gray,
+             colors = c('#595959', "white", "#6D9EC1"))
+
+
+```
+
+Electrical energy consumption is negatively correlated with the months with low temperature (January, February...) and positively correlated with months with high temperature (July, August, September...) which indicates that in Tunisia the consumption of electrical energy increases only in the summer due to the higher temperature that lead to the overuse of air conditioner.
+
+
+
+```{r hier}
+ggcorrplot(cor(D[,c(8,17:22)]),
+             outline.col = "white",
+             lab = TRUE,
+             lab_size = 5,
+             lab_col = '#736F6E',
+             ggtheme = ggplot2::theme_gray,
+             colors = c('#595959', "white", "#6D9EC1"))
+
+
+```
+
+
+```{r randind}
+ggcorrplot(cor(D[,c(8,23:29)]),
+             outline.col = "white",
+             lab = TRUE,
+             lab_size = 5,
+             lab_col = '#736F6E',
+             ggtheme = ggplot2::theme_gray,
+             colors = c('#595959', "white", "#6D9EC1"))
+
+```
+
+Electrical energy consumption is negatively correlated with the days of the weekend (Saturday and sunday) and positively correlated with the rest of days of the week. 
+
+The consumption of electrical energy descreases in the weekends probably because it's a holiday and there's no energy consumption in all the fields of work. 
+
+
+## Modeling of the time series:
+
+tslm function is used to explicate the consumption of electrical energy using various explicative variables: 
+
+```{r clustval}
+train <- D[1:2557, ] #excluding the last year to predict energy consumption later
+test <-  D[2558:2922, ]
+
+train=ts(train,start = c(2010, as.numeric(format(train$Date[1], "%j"))),frequency = 365)
+
+fit <- tslm(Energie_trans ~annee+tmin+JF+Ramadhan+Janvier+
+Fevrier+Mars+Avril+Mai+Juin+Juillet+Aout+Septembre+Octobre+Novembre+Lundi+Mardi+Mercredi+Jeudi+Vendredi+Samedi, data = train)
+summary(fit)
+accuracy(fit)
+
+```
+
+This model reflects 83.27% of the reality (Adjusted R-squared=0.8317).
+
+
+  
+## Forecasting :
+
+The model previously constructed will be used to make a forecast of one year of electrical energy in Tunisia. 
+
+```{r som}
+
+ 
+  fore<-forecast(fit,test)
+  p=plot_ly() %>%
+    add_lines(x = (D)$Date , y = (D)$Energie_trans,
+              color = I('#595959') , name = "observed") %>%
+    add_ribbons(x = (test)$Date, ymin = fore$lower[, 2], ymax = fore$upper[, 2],
+                color = I("#b3b3ff"), name = "95% CI") %>%
+    add_lines(x = (test)$Date, y = fore$mean, color = I("#0073e6"), name = "prediction")
+p
+  
+  
+  
+```
+
+The forecasted values of consumed electrical energy is accurate as we can observe through the plot.
+
+Electrical energy consumption will continue to have an increasing trend through time. 
+
+## Bibliography:
+
+* Cleveland, R. B., Cleveland, W. S., McRae, J. E., & Terpenning, I. J. (1990). STL: A seasonal-trend decomposition procedure based on loess. Journal of Official Statistics, 6(1), 3–33. http://bit.ly/stl1990
+
+* Rob J Hyndman and George Athanasopoulos, 
+Monash University, Australia. Forecasting: Principles and Practice. https://otexts.com/fpp2/
+
+* Yan Holtz.the R graph gallery. https://www.r-graph-gallery.com/index.html

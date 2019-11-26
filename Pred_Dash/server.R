@@ -13,9 +13,10 @@ library(ggplot2)
 library(plotly)
 library(ggcorrplot)
 library(RColorBrewer)
+library(knitr)
 d=read_excel('donnees_Electricite.xlsx',sheet = 2)
-Date=paste(d$annee,d$mois,d$jour,sep = '-')
-d$Date=as.Date(Date)
+  Date=paste(d$annee,d$mois,d$jour,sep = '-')
+  d$Date=as.Date(Date)
 
 shinyServer(function(input, output) {
             
@@ -158,7 +159,7 @@ output$plot4=renderPlotly({
     add_lines(x = (d)$Date , y = (d)$Energie_trans,
               color = I('#595959') , name = "observed") %>%
     add_ribbons(x = (test)$Date, ymin = fore$lower[, 2], ymax = fore$upper[, 2],
-                color = I("#b3b3ff"), name = "95% confidence") %>%
+                color = I("#b3b3ff"), name = "95% CI") %>%
     add_lines(x = (test)$Date, y = fore$mean, color = I("#0073e6"), name = "prediction")
   
   
@@ -176,6 +177,8 @@ output$text2=renderPrint({
   fit <- tslm(formula(formule), data = train)
   accuracy(fit)
 })
+
+
 
 
 

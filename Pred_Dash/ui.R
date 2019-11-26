@@ -18,7 +18,7 @@ d=read_excel('donnees_Electricite.xlsx',sheet = 2)
 shinyUI(dashboardPage(
     
     
-    dashboardHeader(title = 'Electrical Energy'),
+    dashboardHeader(title = 'Energy Consumption'),
     ########## sider panel ####
     dashboardSidebar( width = 250,
                       sidebarMenu(
@@ -29,7 +29,8 @@ shinyUI(dashboardPage(
                                    menuSubItem("Univariate Analysis", tabName = "UA", icon = icon("boxes")),
                                    menuSubItem("Bivariate analysis", tabName = "BA", icon = icon("megaport"))
                           ),
-                          menuItem("Prediction", tabName = "ML", icon = icon("slideshare"))
+                          menuItem("Prediction", tabName = "ML", icon = icon("slideshare")),
+                          menuItem("Report", tabName = "RP", icon = icon("file-alt"))
                           
                           
                           
@@ -131,7 +132,7 @@ shinyUI(dashboardPage(
                                                 ,choices =names(d[,5:7]),selected ='tmin'),
                                     
                                     
-                                    sliderInput("nb", "Number of days of prediction:",
+                                    sliderInput("nb", "Number of days to predict:",
                                                  min = 1, max =365 , value = 365),
                                     'The model used is tslm.'
                                     
@@ -158,8 +159,16 @@ shinyUI(dashboardPage(
                     
                     
                     
+            ),
+        ######### Repoort #######
+        tabItem(tabName = "RP",
+                tags$iframe(src = './Report.html', 
+                            width = '100%', height = '570px', 
+                            frameborder = 0, scrolling = F
             )
-        
+               
+                
+                )
         
         
     
