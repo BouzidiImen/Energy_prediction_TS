@@ -1,4 +1,4 @@
-# Energy_prediction_TS
+# Electrical Energy Consumption in Tunisia
 
 This is a shiny app to predict the consumption of electrical energy in Tunisia based on temporal data.
 
